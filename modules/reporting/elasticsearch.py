@@ -144,6 +144,37 @@ class ElasticSearch(Report):
                 "task #%d: %s" % (self.task["id"], e)
             )
 
+    def process_signatures(self, signatures):
+        new_signatures = []
+
+        for signature in signatures:
+            new_signature = signature.copy()
+
+            if "marks" in signature:
+                new_signature["marks"] = []
+                for mark in signature["marks"]:
+                    new_mark = {}
+                    for k, v in mark.iteritems():
+                        if k != "call" and type(v) == dict:
+                            # If marks is a dictionary we need to explicitly define it for the ES mapping
+                            # this is in the case that a key in marks is sometimes a string and sometimes a dictionary
+                            # if the first document indexed into ES is a string it will not accept a signature
+                            # and through a ES mapping exception.  To counter this dicts will be explicitly stated
+                            # in the key except for calls which are always dictionaries.
+                            # This presented itself in testing with signatures.marks.section which would sometimes be a
+                            # PE section string such as "UPX"  and other times full details about the section as a
+                            # dictionary in the case of packer_upx and packer_entropy signatures
+                            new_mark[k+"_dict"] = v
+                        else:
+                            # If it is not a mark it is fine to leave key as is
+                            new_mark[k] = v
+
+                    new_signature["marks"].append(new_mark)
+
+            new_signatures.append(new_signature)
+
+        return new_signatures
+
     def process_behavior(self, results, bulk_submit_size=1000):
         """Index the behavioral data."""
         for process in results.get("behavior", {}).get("processes", []):
@@ -202,6 +233,7 @@ class ElasticSearch(Report):
 
         signatures = results.get("signatures")
         if signatures:
+            signatures = self.process_signatures(signatures)
             doc["signatures"] = signatures
 
         dropped = results.get("dropped")
