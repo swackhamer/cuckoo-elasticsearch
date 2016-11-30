@@ -188,6 +188,7 @@ class ElasticSearch(Report):
                 call_document.update(call)
                 call_document.update(base_document)
                 bulk_index.append({
+                    "_op_type": "index",
                     "_index": self.dated_index,
                     "_type": self.call_type,
                     "_source": call_document
