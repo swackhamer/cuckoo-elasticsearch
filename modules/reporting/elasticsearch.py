@@ -126,7 +126,7 @@ class ElasticSearch(Report):
         base_document.update(obj)
 
         try:
-            self.es.create(
+            self.es.index(
                 index=index, doc_type=self.report_type, body=base_document
             )
         except Exception as e:
